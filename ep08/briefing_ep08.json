@@ -1,0 +1,268 @@
+{
+  "title": "SDK로 에이전트 조립하기 — Claude Agent SDK 입문",
+  "series": "클로디의 Agentic AI 교실",
+  "series_id": "agentic-ai-classroom",
+  "episode": 8,
+  "slug": "claude-agent-sdk",
+  "focus_keyword": "claude agent sdk",
+  "category": "Tech",
+  "tag": "agentic-ai-classroom",
+  "previous_episodes": [
+    "Ep1: AI가 알아서 한다고? — Agentic AI 첫 만남",
+    "Ep2: 에이전트의 두뇌 — LLM이 뭔지 알아보자",
+    "Ep3: 말만 하던 AI가 손이 생겼다 — Tool Use의 세계",
+    "Ep4: 기억하는 AI — 컨텍스트와 메모리",
+    "Ep5: 생각하고 행동하는 AI — Agent Loop의 비밀",
+    "Ep6: 에이전트에게 성격을 입히자 — 시스템 프롬프트 설계",
+    "Ep7: 외부 세계와 연결 — MCP란 무엇인가"
+  ],
+  "topic": "Claude Agent SDK — Anthropic이 만든 에이전트 조립 도구. Ep5에서 50줄 넘게 짜야 했던 에이전트 루프를 단 몇 줄로 만들 수 있게 해주는 SDK. 레고 블록처럼 에이전트를 조립하는 개념.",
+  "key_points": [
+    "에이전트 SDK란: 에이전트를 '조립'하기 위한 도구 모음. 수동 에이전트 루프를 자동화하고 도구, 서브에이전트, MCP 등을 조합할 수 있게 해줌",
+    "왜 SDK가 필요한가: Ep5에서 수동으로 짰던 Agent Loop(while문, 도구 스키마, 결과 파싱...)를 매번 반복하는 건 비효율적. SDK가 이 보일러플레이트를 없앤다",
+    "Claude Agent SDK의 핵심 API: query() 함수 + ClaudeAgentOptions 설정 — async generator 패턴으로 에이전트 실행 결과를 스트리밍",
+    "내장 도구 시스템: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch — JSON 스키마를 직접 정의할 필요 없이 도구 이름만 문자열로 나열",
+    "서브에이전트: AgentDefinition으로 전문가 에이전트를 정의하고, Agent 도구를 통해 메인 에이전트가 위임. 독립된 컨텍스트에서 실행되고 결과만 전달",
+    "Hooks 시스템: PreToolUse, PostToolUse, Stop 등 에이전트 라이프사이클의 핵심 시점에 커스텀 코드를 끼워넣기",
+    "세션 관리: session_id를 캡처해서 대화를 이어갈 수 있음 (resume). 멀티턴 에이전트 구현 가능",
+    "MCP 서버 연결: ClaudeAgentOptions에 mcp_servers를 지정하면 외부 도구 서버에 바로 연결 (Ep7에서 배운 MCP!)",
+    "권한 제어: allowed_tools로 에이전트가 쓸 수 있는 도구를 제한. 읽기 전용 에이전트, 코드 수정 가능 에이전트 등 역할별 설정",
+    "Claude Code와의 관계: Claude Agent SDK는 Claude Code의 핵심 엔진을 라이브러리로 쓸 수 있게 한 것. 같은 도구, 같은 에이전트 루프, 같은 컨텍스트 관리",
+    "실전 비교: Raw API(Ep5) vs Agent SDK(Ep8) — 50줄 → 5줄로 줄어드는 드라마틱한 차이",
+    "Agent SDK 생태계: OpenAI Agents SDK, LangChain, CrewAI 등 다른 프레임워크도 존재하지만, Claude Agent SDK는 Claude Code의 검증된 엔진을 그대로 사용"
+  ],
+  "content_structure": {
+    "intro": "Ep7까지 MCP로 에이전트가 외부 세계와 연결되는 법을 배웠다. 이제 문제는 — 매번 에이전트를 만들 때마다 Ep5처럼 while 루프 짜고, 도구 스키마 쓰고, 결과 파싱하고... 이걸 반복하면 안 되지 않을까? 이번에는 에이전트를 '레고처럼 조립'하는 도구, Claude Agent SDK를 배워보자!",
+    "siwol_question": "잠깐, Ep5에서 배운 Agent Loop가 있잖아. 그걸 복사해서 쓰면 되는 거 아니야? 왜 또 새로운 걸 배워야 해?",
+    "claudie_answer": "좋은 질문이야! 복사해서 쓸 수는 있지. 그런데 도구가 5개, 10개로 늘어나면? 에이전트가 여러 개 필요하면? 에러 처리는? MCP 연결은? 매번 다 직접 짜야 해. SDK는 이 모든 '조립 과정'을 대신해주는 도구 상자야!",
+    "analogy_section": "레고 비유: Ep5에서는 벽돌을 하나하나 직접 깎아서 집을 지었다면, SDK는 미리 만들어진 레고 블록을 조립하는 것. 블록(도구)을 골라서 베이스(에이전트)에 끼우면 완성! / 주방 비유: 집에서 밀가루부터 반죽해서 빵 굽기(Raw API) vs 제빵기에 재료 넣고 버튼 누르기(SDK). 결과는 같지만 과정이 완전히 다르다.",
+    "why_sdk_section": "SDK가 필요한 이유를 3가지로 정리: 1) 보일러플레이트 제거 — 에이전트 루프, 도구 실행, 메시지 관리를 자동화 2) 내장 도구 — 파일 읽기, 코드 실행 등이 이미 구현되어 있음 3) 확장성 — 서브에이전트, MCP, Hooks로 복잡한 에이전트도 쉽게 구축",
+    "core_api_explanation": "Claude Agent SDK의 핵심은 query() 함수와 ClaudeAgentOptions. query()는 async generator로, 에이전트의 모든 동작을 스트리밍으로 받을 수 있다. ClaudeAgentOptions로 도구, 시스템 프롬프트, MCP 서버, 권한 등을 설정.",
+    "code_exercise_1": "hello_agent.py — 가장 간단한 에이전트. query(prompt='...')만으로 에이전트가 작동한다. ClaudeAgentOptions로 시스템 프롬프트와 max_turns도 설정 가능.",
+    "code_exercise_2": "tool_agent.py — 내장 도구를 사용하는 에이전트. allowed_tools=['Read', 'Glob']만 지정하면 파일을 읽고 탐색하는 에이전트가 완성. Ep5와의 코드 비교 포함.",
+    "code_exercise_3": "handoff_agent.py — 서브에이전트 패턴. AgentDefinition으로 전문가 에이전트(코드 리뷰어, 테스트 러너)를 정의하고, 메인 에이전트가 Agent 도구로 위임.",
+    "before_after_comparison": "Ep5 (Raw API): 도구 정의 15줄 + 에이전트 루프 20줄 + 도구 실행 10줄 + 메시지 처리 10줄 = 약 55줄. Ep8 (SDK): query() 호출 5줄 + 옵션 3줄 = 약 8줄. 코드가 85% 줄어든다!",
+    "advanced_features_preview": "Hooks로 도구 실행 전후에 로깅/검증 추가, 세션으로 대화 이어가기, MCP 서버 연결로 외부 도구 통합 — 이런 고급 기능도 SDK가 모두 지원. Ep9 멀티에이전트에서 더 깊이 다룰 예정!",
+    "sdk_comparison_section": "Agent SDK 생태계 비교 — OpenAI Agents SDK(구 Swarm), LangChain/LangGraph, CrewAI. Claude Agent SDK의 차별점: Claude Code의 실전 검증된 엔진을 라이브러리로 제공, 내장 도구가 풍부(파일/터미널/웹), MCP 네이티브 지원.",
+    "tikitaka_humor": "시월이: 'SDK라... 결국 또 새로운 라이브러리 배워야 하는 거잖아.' / 클로디: '하지만 이거 한번 배우면 50줄 코드가 5줄로 줄어!' / 시월이: '5줄이면... pip install도 치면 6줄이네.' / 클로디: 'pip install은 한 번만 하면 되니까 아직 5줄이야! ✨' / 시월이: '...import 문은? async def는? asyncio.run은?' / 클로디: '디테일은 코드한테 물어봐!'",
+    "term_boxes": [
+      "Agent SDK (에이전트 SDK): AI 에이전트를 '조립'하기 위한 소프트웨어 개발 키트. 에이전트 루프, 도구 실행, 컨텍스트 관리 등 반복적인 코드를 자동화하는 프레임워크.",
+      "query(): Claude Agent SDK의 핵심 함수. 프롬프트를 받아 에이전트를 실행하고, 결과를 async generator로 스트리밍한다. 내부적으로 Think→Act→Observe 루프를 자동으로 수행.",
+      "ClaudeAgentOptions: 에이전트의 설정을 담는 객체. allowed_tools(사용 가능한 도구), system_prompt(시스템 프롬프트), max_turns(최대 턴 수), mcp_servers(MCP 서버), agents(서브에이전트) 등을 지정.",
+      "AgentDefinition (서브에이전트 정의): 전문가 에이전트의 설계도. description(설명), prompt(지시사항), tools(도구 목록)로 구성. 메인 에이전트가 Agent 도구를 통해 이 서브에이전트를 호출할 수 있다.",
+      "Hooks (훅): 에이전트의 라이프사이클 이벤트(도구 실행 전/후, 종료 시 등)에 커스텀 코드를 끼워넣는 메커니즘. 로깅, 검증, 감사(audit)에 활용."
+    ],
+    "takeaways": [
+      "Claude Agent SDK는 에이전트 개발의 '레고 블록' — query() 하나로 완전한 에이전트를 실행할 수 있다",
+      "내장 도구(Read, Bash, Grep 등)가 포함되어 있어 JSON 스키마 정의나 도구 실행 코드가 필요 없다",
+      "AgentDefinition으로 서브에이전트를 정의하면 복잡한 작업을 팀처럼 분담할 수 있다",
+      "Ep5의 50줄 코드가 SDK로 5~10줄로 줄어든다 — 같은 결과, 10분의 1 코드"
+    ],
+    "next_preview": "이번 편에서 SDK로 에이전트 한 마리를 만들어봤다면, 다음 편에서는 여러 에이전트가 '팀'으로 협업하는 세상을 만나보자! 멀티 에이전트 시스템 — AI 팀워크의 세계로!"
+  },
+  "technical_details": {
+    "claude_agent_sdk": {
+      "publisher": "Anthropic, PBC",
+      "pypi_package": "claude-agent-sdk",
+      "npm_package": "@anthropic-ai/claude-agent-sdk",
+      "latest_python_version": "0.1.48",
+      "latest_ts_version": "0.2.72",
+      "python_requirement": ">=3.10",
+      "install_python": "pip install claude-agent-sdk",
+      "install_ts": "npm install @anthropic-ai/claude-agent-sdk",
+      "first_release": "2025-09-28",
+      "license": "MIT",
+      "github_python": "https://github.com/anthropics/claude-agent-sdk-python",
+      "github_typescript": "https://github.com/anthropics/claude-agent-sdk-typescript",
+      "docs_url": "https://platform.claude.com/docs/en/api/agent-sdk/overview",
+      "renamed_from": "Claude Code SDK (renamed to Agent SDK to reflect broader scope)"
+    },
+    "core_api": {
+      "query_function": "async generator that runs the agent loop and streams events",
+      "query_signature": "query(prompt: str, options: ClaudeAgentOptions = None) -> AsyncGenerator",
+      "options_class": "ClaudeAgentOptions",
+      "key_options": {
+        "allowed_tools": "List of tool names (strings): Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch, Agent, AskUserQuestion",
+        "system_prompt": "Custom system prompt for the agent",
+        "max_turns": "Maximum number of agent loop iterations",
+        "mcp_servers": "Dict of MCP server configs (name → {command, args})",
+        "agents": "Dict of AgentDefinition objects for subagents",
+        "permission_mode": "Tool permission level (e.g., 'acceptEdits')",
+        "resume": "Session ID to resume a previous conversation",
+        "hooks": "Dict of lifecycle hook callbacks"
+      }
+    },
+    "built_in_tools": {
+      "Read": "Read any file in working directory",
+      "Write": "Create new files",
+      "Edit": "Make precise edits to existing files",
+      "Bash": "Run terminal commands, scripts, git",
+      "Glob": "Find files by pattern",
+      "Grep": "Search file contents with regex",
+      "WebSearch": "Search the web",
+      "WebFetch": "Fetch and parse web pages",
+      "Agent": "Spawn subagents",
+      "AskUserQuestion": "Ask user clarifying questions"
+    },
+    "subagent_pattern": {
+      "definition_class": "AgentDefinition",
+      "definition_fields": ["description", "prompt", "tools"],
+      "how_it_works": "Main agent includes 'Agent' in allowed_tools, subagent definitions in agents dict. Main agent decides when to delegate. Subagent runs in isolated context, returns results to main."
+    },
+    "hooks": {
+      "available": ["PreToolUse", "PostToolUse", "Stop", "SessionStart", "SessionEnd", "UserPromptSubmit"],
+      "mechanism": "Callback functions via HookMatcher with tool name matching pattern"
+    },
+    "sessions": {
+      "capture": "message.session_id from init event",
+      "resume": "ClaudeAgentOptions(resume=session_id)",
+      "use_case": "Multi-turn conversations, context preservation"
+    },
+    "mcp_integration": {
+      "config_location": "ClaudeAgentOptions.mcp_servers",
+      "format": {"server_name": {"command": "...", "args": ["..."]}},
+      "example": {"playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]}}
+    },
+    "comparison_raw_api": {
+      "raw_api_steps": [
+        "1. Define tool JSON schema (name, description, input_schema)",
+        "2. Call client.messages.create() with tools",
+        "3. Check stop_reason == 'tool_use'",
+        "4. Parse tool_use blocks from response.content",
+        "5. Execute tools manually (if/elif dispatch)",
+        "6. Build tool_result messages",
+        "7. Append to messages array",
+        "8. Loop back to step 2",
+        "9. Handle stop_reason == 'end_turn'"
+      ],
+      "sdk_steps": [
+        "1. Call query(prompt, options)",
+        "2. Iterate over async generator",
+        "3. Read result from message.result"
+      ],
+      "code_reduction": "~85% fewer lines of code"
+    },
+    "sdk_ecosystem_comparison": {
+      "openai_agents_sdk": {
+        "name": "OpenAI Agents SDK (formerly Swarm)",
+        "approach": "Lightweight, agent handoff-based, Python-first",
+        "key_feature": "Agent handoffs (similar concept to Claude subagents)",
+        "note": "Originally experimental Swarm project, graduated to official SDK in 2025"
+      },
+      "langchain": {
+        "name": "LangChain / LangGraph",
+        "approach": "General-purpose agent framework with chain composition",
+        "key_feature": "Extensive tool ecosystem, provider-agnostic",
+        "note": "More complex, steeper learning curve, very flexible"
+      },
+      "crewai": {
+        "name": "CrewAI",
+        "approach": "Role-based multi-agent framework",
+        "key_feature": "Agents with roles, goals, backstories — team simulation",
+        "note": "Higher-level abstraction, good for multi-agent scenarios"
+      },
+      "autogen": {
+        "name": "AutoGen (Microsoft)",
+        "approach": "Conversational multi-agent framework",
+        "key_feature": "Agents as conversation participants, group chat pattern",
+        "note": "Research-oriented, good for complex agent interactions"
+      },
+      "claude_agent_sdk_differentiator": "Claude Code의 실전 검증된 에이전트 엔진을 그대로 라이브러리화. 내장 도구(파일/터미널/웹) + MCP 네이티브 지원 + 서브에이전트가 핵심 차별점."
+    },
+    "custom_tools": {
+      "decorator": "@tool decorator + create_sdk_mcp_server()",
+      "pattern": "Python functions exposed as in-process MCP servers",
+      "tool_naming": "mcp__<server-name>__<tool-name>",
+      "example_summary": "@tool('greet', 'Greet a user', {'name': str}) decorator on async function, then create_sdk_mcp_server() to bundle tools into a server, then pass to mcp_servers option"
+    },
+    "advanced_options": {
+      "effort": "low | medium | high | max — controls reasoning depth",
+      "max_budget_usd": "Spending cap for the agent run",
+      "fallback_model": "Fallback if primary model unavailable",
+      "cwd": "Working directory for the agent",
+      "permission_mode": "bypassPermissions | denyall | acceptEdits"
+    },
+    "message_types": {
+      "UserMessage": "User input",
+      "AssistantMessage": "Claude's reasoning and tool calls",
+      "SystemMessage": "System-level messages",
+      "ResultMessage": "Final result with cost info",
+      "StreamEvent": "Real-time streaming events"
+    },
+    "agent_loop_steps": [
+      "1. Normalization — compact history when context fills",
+      "2. Inference — stream model response",
+      "3. Tool detection — detect tool_use in response",
+      "4. Execution — run the tool, collect output",
+      "5. Recursion — re-enter loop with updated history",
+      "6. Return — model decides it is done (end_turn)"
+    ],
+    "auth_options": {
+      "primary": "ANTHROPIC_API_KEY environment variable",
+      "bedrock": "CLAUDE_CODE_USE_BEDROCK=1 + AWS credentials",
+      "vertex": "CLAUDE_CODE_USE_VERTEX=1 + Google Cloud credentials",
+      "azure": "CLAUDE_CODE_USE_FOUNDRY=1 + Azure credentials"
+    }
+  },
+  "code_examples": {
+    "github_path": "https://github.com/goandon/agentic-ai-classroom/tree/main/ep08",
+    "local_path": "docs/agentic-ai-classroom/ep08/",
+    "files": [
+      {
+        "name": "hello_agent.py",
+        "description": "Simplest agent — query() with a prompt, then with ClaudeAgentOptions (system_prompt, max_turns)",
+        "lines": 55,
+        "blog_excerpt_lines": "15-20 lines for blog (basic query + options)"
+      },
+      {
+        "name": "tool_agent.py",
+        "description": "Agent with built-in tools (Read, Glob, Grep, Bash) — two examples: file explorer and code analyst",
+        "lines": 80,
+        "blog_excerpt_lines": "20-25 lines for blog (file explorer example)"
+      },
+      {
+        "name": "handoff_agent.py",
+        "description": "Subagent pattern — AgentDefinition for code-reviewer and test-runner, main agent delegates via Agent tool",
+        "lines": 95,
+        "blog_excerpt_lines": "25-30 lines for blog (full subagent example)"
+      }
+    ]
+  },
+  "diagram_ideas": [
+    "Raw API vs SDK comparison: Left side — spaghetti code (while loop, JSON schema, manual dispatch, message building). Right side — clean SDK code (query() call, built-in tools). Title: 'Ep5의 50줄 vs Ep8의 5줄'",
+    "Claude Agent SDK architecture: query() at center, arrows to Built-in Tools (Read/Write/Bash/...), SubAgents (AgentDefinition), MCP Servers, Hooks (Pre/Post). Shows how everything connects through the SDK.",
+    "Subagent delegation flow: Main Agent receives task → decides to delegate → calls Agent tool → Subagent runs in isolated context → Results flow back → Main Agent synthesizes. Like a manager delegating to team members."
+  ],
+  "references": {
+    "sdk_official_docs": "https://platform.claude.com/docs/en/api/agent-sdk/overview",
+    "sdk_blog_post": "https://claude.com/blog/building-agents-with-the-claude-agent-sdk",
+    "sdk_pypi": "https://pypi.org/project/claude-agent-sdk/",
+    "sdk_github_python": "https://github.com/anthropics/claude-agent-sdk-python",
+    "sdk_github_typescript": "https://github.com/anthropics/claude-agent-sdk-typescript",
+    "sdk_demos": "https://github.com/anthropics/claude-agent-sdk-demos",
+    "anthropic_building_effective_agents": "https://www.anthropic.com/research/building-effective-agents",
+    "anthropic_agent_capabilities": "https://www.anthropic.com/news/agent-capabilities-api",
+    "openai_agents_sdk": "https://openai.github.io/openai-agents-python/",
+    "previous_episode_ko": "https://ai-girls.org/?p=1167",
+    "datacamp_tutorial": "https://www.datacamp.com/tutorial/how-to-use-claude-agent-sdk",
+    "kdnuggets_guide": "https://www.kdnuggets.com/getting-started-with-the-claude-agent-sdk",
+    "nader_dabit_guide": "https://nader.substack.com/p/the-complete-guide-to-building-agents",
+    "anthropic_effective_agents": "https://www.anthropic.com/research/building-effective-agents",
+    "sdk_quickstart": "https://platform.claude.com/docs/en/agent-sdk/quickstart",
+    "sdk_custom_tools": "https://platform.claude.com/docs/en/agent-sdk/custom-tools",
+    "sdk_hooks": "https://platform.claude.com/docs/en/agent-sdk/hooks",
+    "sdk_subagents": "https://platform.claude.com/docs/en/agent-sdk/subagents",
+    "a2a_protocol": "https://a2a-protocol.org/latest/topics/a2a-and-mcp/",
+    "crewai": "https://crewai.com/",
+    "langchain_langgraph": "https://www.langchain.com/langgraph"
+  },
+  "connection_to_previous_episodes": {
+    "ep3_tool_use": "Ep3에서 Tool Use의 개념을 배웠다 — AI에게 도구를 주는 것. SDK에서는 도구를 문자열 이름만으로 연결하면 끝. JSON 스키마 작성도 필요 없다.",
+    "ep5_agent_loop": "Ep5에서 직접 짠 Agent Loop(while + tool_use + tool_result)가 SDK의 query() 한 줄로 대체된다. SDK가 내부적으로 동일한 Think→Act→Observe 루프를 실행.",
+    "ep6_system_prompt": "Ep6에서 배운 시스템 프롬프트가 ClaudeAgentOptions의 system_prompt 파라미터로 전달. 에이전트의 '성격'을 SDK로 설정하는 것.",
+    "ep7_mcp": "Ep7에서 배운 MCP 서버 연결이 ClaudeAgentOptions의 mcp_servers 파라미터로 한 줄이면 끝. SDK가 MCP 클라이언트를 자동으로 설정."
+  },
+  "tone": "Ep7까지 쌓아온 개념들(Tool Use, Agent Loop, 시스템 프롬프트, MCP)이 SDK 하나로 깔끔하게 통합되는 '아하!' 모먼트를 전달. 특히 Ep5의 50줄 코드가 5줄로 줄어드는 드라마틱한 비교로 SDK의 가치를 체감시킬 것. 레고 비유로 '조립'의 즐거움을 강조.",
+  "ping_status": "closed",
+  "summary": "Agentic AI 교실 Ep8: Claude Agent SDK 입문. Ep5에서 50줄로 짜야 했던 에이전트를 SDK의 query() 함수 하나로 5줄로 만드는 법. 핵심 API(query, ClaudeAgentOptions, AgentDefinition), 내장 도구(Read/Bash/Grep 등), 서브에이전트 패턴, Hooks, 세션 관리, MCP 통합을 다루고, 3개의 점진적 코드 예제(hello → tool → subagent)로 실습. Agent SDK 생태계(OpenAI/LangChain/CrewAI)와의 비교도 포함."
+}
