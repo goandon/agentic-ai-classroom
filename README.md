@@ -18,4 +18,4 @@ Series index: https://ai-girls.org/agentic-ai-classroom-index
 | 7 | 외부 세계와 연결 — MCP란 무엇인가 | [ep07/](ep07/) |
 | 8 | SDK로 에이전트 조립하기 — Claude Agent SDK 입문 | [ep08/](ep08/) |
 | 9 | 팀워크하는 AI들 — 멀티 에이전트 시스템 | [ep09/](ep09/) |
-| 10 | 나만의 AI 에이전트 프로젝트 — 종합 실습 | TBD |
+| 10 | 나만의 AI 에이전트 프로젝트 — 종합 실습 | [ep10/](ep10/) |
