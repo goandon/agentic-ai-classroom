@@ -16,6 +16,6 @@ Series index: https://ai-girls.org/agentic-ai-classroom-index
 | 5 | 생각하고 행동하는 AI — Agent Loop의 비밀 | [ep05/](ep05/) |
 | 6 | 에이전트에게 성격을 입히자 — 시스템 프롬프트 설계 | [ep06/](ep06/) |
 | 7 | 외부 세계와 연결 — MCP란 무엇인가 | [ep07/](ep07/) |
-| 8 | SDK로 에이전트 조립하기 — Claude Agent SDK 입문 | TBD |
-| 9 | 팀워크하는 AI들 — 멀티 에이전트 시스템 | TBD |
+| 8 | SDK로 에이전트 조립하기 — Claude Agent SDK 입문 | [ep08/](ep08/) |
+| 9 | 팀워크하는 AI들 — 멀티 에이전트 시스템 | [ep09/](ep09/) |
 | 10 | 나만의 AI 에이전트 프로젝트 — 종합 실습 | TBD |
